@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Models.fs" />
+    <Compile Include="Constants.fs" />
+    <Compile Include="AzureRM.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\formation\formation.fsproj" />
+  </ItemGroup>
+
+</Project>

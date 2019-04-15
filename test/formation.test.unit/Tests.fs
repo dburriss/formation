@@ -29,7 +29,7 @@ let ``Can create a model and override values`` () =
 
 [<Fact>]
 let ``Can serialize a model`` () =
-    
+    // Resource Group
     let rg = 
         AzureRM.resource_group "azure_test_group_rm"
         |> fun res -> { res with location = Some AzureRegion.westeurope }
@@ -38,11 +38,17 @@ let ``Can serialize a model`` () =
     let standardVm label name resourceGroupName =
         AzureRM.virtual_machine VM_Size.Standard_A0 AzureRegion.westeurope (resourceGroupName |> Terraform.makeName label) name label     
     
-    // environment would be sent in via a command line argument to generate TF for environment
-    // Could have conditions on each environment written in code
+    // environment would be sent in via a command line argument to generate TF for specific environment
+    // Could have conditions on each environment written in code (ie. smaller sized machine for test)
+    let envVMAmmend env vm =
+        match env with
+        | "test" -> vm |> fun res -> { res with vm_size = VM_Size.Basic_A0 }
+        | _ -> vm
+
     let environment = "test"
     let tf = 
         standardVm environment "test_vm_name" rg.name
+        |> envVMAmmend environment
         |> fun model -> Resource(environment, model :> obj)
         |> Terraform.serialize
 

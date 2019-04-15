@@ -21,7 +21,7 @@ module Terraform =
 
     let isSeqOf<'a> (t:Type) = 
         let isGeneric = t.IsGenericType
-        let isSeq = isEnumerableType t
+        let isSeq = isGeneric && isEnumerableType t
         isSeq
 
     let isTupleOf<'a> (t:Type) =
@@ -81,21 +81,22 @@ module Terraform =
         //else None
 
     let (|Obj|_|) (o:obj) =
-        
-        let props x = 
-            x.GetType().GetProperties()
-            |> Array.toList
-            |> List.map (fun pi -> (pi.Name, pi.GetValue(x, null)))
-        let t = o.GetType()
-        let ps = 
-            match o with
-            | null -> []
-            | x when isOption t -> 
-                let y = FSharpValue.GetUnionFields (x, x.GetType()) |> snd |> Seq.head :?> obj
-                props y
-            | _ -> props o
+        if(isNull o) then None
+        else
+            let props x = 
+                x.GetType().GetProperties()
+                |> Array.toList
+                |> List.map (fun pi -> (pi.Name, pi.GetValue(x, null)))
+            let t = o.GetType()
+            let ps = 
+                match o with
+                | null -> []
+                | x when isOption t -> 
+                    let y = FSharpValue.GetUnionFields (x, x.GetType()) |> snd |> Seq.head :?> obj
+                    props y
+                | _ -> props o
 
-        if(List.isEmpty ps) then None else Some ps
+            if(List.isEmpty ps) then None else Some ps
 
     let boolToString b = if(b) then "true" else "false"
 

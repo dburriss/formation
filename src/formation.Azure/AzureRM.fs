@@ -40,3 +40,33 @@ module AzureRM =
             id = None
         }
         model
+
+    let subnet name resource_group_name virtual_network_name address_prefix =
+        let model : azurerm_subnet = {
+            name = name
+            resource_group_name = resource_group_name
+            virtual_network_name = virtual_network_name
+            address_prefix = address_prefix
+            network_security_group_id = None
+            route_table_id = None
+            service_endpoints = None
+            delegation = None
+
+            id = None
+            ip_configuration = None
+        }
+        model
+
+    let delegation name service_delegation =
+        let model : delegation = {
+            name = name
+            service_delegation = service_delegation
+        }
+        model
+
+    let service_delegation name =
+        let model : service_delegation = {
+            name = name
+            actions = None
+        }
+        model

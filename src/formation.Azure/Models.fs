@@ -88,7 +88,7 @@ type azurerm_subnet = {
     network_security_group_id : string option
     route_table_id : string option
     service_endpoints : string option
-    delegation : delegation
+    delegation : delegation option
 
     id : string option
     ip_configuration : (string list) option

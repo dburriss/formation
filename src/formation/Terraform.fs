@@ -119,7 +119,7 @@ module Terraform =
     let append (s:string) (sb:StringBuilder) = sb.Append(s) |> ignore
     let appendLine (s:string) (sb:StringBuilder) = sb.AppendLine(s) |> ignore
 
-    //let rec serializeObject (sb:StringBuilder) depth o =
+    //let rec serializeProperty (sb:StringBuilder) depth pi =
 
     let serializeResouce (sb:StringBuilder) (label, model)  = 
         sb |> appendLine(sprintf "resource \"%s\" \"%s\" {\n" (model |> typeName) label)
@@ -158,8 +158,11 @@ module Terraform =
 
     let serialize (formation:Formation) =
         let sb = StringBuilder()
-        let rec loop s f =
-            match f with
-            | Resource x -> x |> serializeResouce s
-            | _ -> s
+        let rec loop sbuilder fmtn =
+            match fmtn with
+            | Resource x -> x |> serializeResouce sbuilder
+            | Formation xs -> 
+                xs |> List.iter (fun f -> loop sbuilder f |> ignore)
+                sbuilder
+            | _ -> failwithf "Not implemented for %A" fmtn
         (loop sb formation) |> string

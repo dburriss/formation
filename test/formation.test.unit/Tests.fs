@@ -12,14 +12,14 @@ open formation.Azure
 // What type? obj sucks
 
 [<Fact>]
-let ``Can create a model and override values`` () =
+let ``Can create a model of single Formation and override values`` () =
 
     let environment = "test"
     let rgName = "test_rg"
 
-    let mySmallVm label name resource_group_name =
+    let mySmallVm label name rg_name =
         // set custom company defaults
-        AzureRM.virtual_machine VM_Size.Basic_A0 AzureRegion.westus (rgName |> Terraform.makeName label) "mytestvm" environment
+        AzureRM.virtual_machine VM_Size.Basic_A0 AzureRegion.westus (rg_name |> Terraform.makeName label) name environment
         |> fun vm -> {vm with delete_data_disks_on_termination = true}
         
 
@@ -66,8 +66,22 @@ type TestModel = {
     sob : azurerm_resource_group option
 }
 
+type TestModelWithNesting = {
+    s : string
+    i : int
+    b : bool
+    slist : string list
+    os : string option
+    oslist : (string list) option
+    tags : ((string * string) list) option
+    ob : azurerm_resource_group
+    sob : azurerm_resource_group option
+    nestedO : azurerm_subnet
+}
+
 let testResource() =
-    
+    let servd = AzureRM.service_delegation "servd"
+    let del = AzureRM.delegation "d" servd
     let resource = Resource ("test",{
             s = "a string"
             os = Some "somestring"
@@ -78,6 +92,24 @@ let testResource() =
             tags = Some [("key","value")]
             ob = AzureRM.resource_group "azure_rm"
             sob = Some (AzureRM.resource_group "some_azure_rm")
+        }:>obj)
+
+    resource
+
+let testResourceWithNesting() =
+    let servd = AzureRM.service_delegation "servd"
+    let del = AzureRM.delegation "d" servd
+    let resource = Resource ("test",{
+            s = "a string"
+            os = Some "somestring"
+            i = 1
+            b = true
+            slist = ["a1";"a2"]
+            oslist = Some ["s1";"s2"]
+            tags = Some [("key","value")]
+            ob = AzureRM.resource_group "azure_rm"
+            sob = Some (AzureRM.resource_group "some_azure_rm")
+            nestedO = (AzureRM.subnet "test_subnet" "rgn" "vnet" "ads" |> fun sub -> {sub with delegation = Some del})
         }:>obj)
 
     resource
@@ -138,3 +170,29 @@ let ``Can serialize an Some object to TF YAML`` () =
     let tf = Terraform.serialize resource
     Assert.Contains("""sob = {""", tf)
     Assert.Contains("name = \"some_azure_rm\"", tf)
+
+[<Fact>]
+let ``Can create a model of 2 Resource Formations and override values`` () =
+
+    let environment = "test"
+    let rgName = "test_rg"
+
+    let mySmallVm label name rg_name =
+        AzureRM.virtual_machine VM_Size.Basic_A0 AzureRegion.westus (rg_name |> Terraform.makeName label) name environment
+        |> fun vm -> {vm with delete_data_disks_on_termination = true}
+        
+
+    let r1 = Resource ("test1", (mySmallVm environment "test_vm_name1" rgName):>obj)
+    let r2 = Resource ("test2", (mySmallVm environment "test_vm_name2" rgName):>obj)
+    let fm = Formation [r1;r2]
+    let tf = Terraform.serialize fm
+    Assert.Contains("""resource "azurerm_virtual_machine" "test1" """, tf)  
+    Assert.Contains("name = \"test_vm_name1\"", tf)
+    Assert.Contains("""resource "azurerm_virtual_machine" "test1" """, tf)  
+    Assert.Contains("name = \"test_vm_name2\"", tf)
+
+[<Fact>]
+let ``Can serialize an object with nested to TF YAML`` () =
+    let resource = testResourceWithNesting()
+    let tf = Terraform.serialize resource
+    Assert.Contains("""resource "azurerm_subnet" "test_subnet" {""", tf)

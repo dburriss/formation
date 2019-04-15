@@ -60,41 +60,75 @@ type TestModel = {
     sob : azurerm_resource_group option
 }
 
-[<Fact>]
-let ``Can serialize resource to string`` () =
+let testResource() =
     
     let resource = Resource ("test",{
-        s = "a string"
-        os = Some "somestring"
-        i = 1
-        b = true
-        slist = ["a1";"a2"]
-        oslist = Some ["s1";"s2"]
-        tags = Some [("key","value")]
-        ob = AzureRM.resource_group "azure_rm"
-        sob = Some (AzureRM.resource_group "some_azure_rm")
-    }:>obj)
+            s = "a string"
+            os = Some "somestring"
+            i = 1
+            b = true
+            slist = ["a1";"a2"]
+            oslist = Some ["s1";"s2"]
+            tags = Some [("key","value")]
+            ob = AzureRM.resource_group "azure_rm"
+            sob = Some (AzureRM.resource_group "some_azure_rm")
+        }:>obj)
+
+    resource
+
+[<Fact>]
+let ``Can serialize string to TF YAML`` () =
+    let resource = testResource()
     let tf = Terraform.serialize resource
-    
-    Assert.NotNull(String.IsNullOrEmpty tf)    
-    
-    Assert.Contains("""s = "a string""", tf)    
-    
-    Assert.Contains("""os = "somestring""", tf)    
-    
+    Assert.Contains("""s = "a string""", tf) 
+
+[<Fact>]
+let ``Can serialize Some string to TF YAML`` () =
+    let resource = testResource()
+    let tf = Terraform.serialize resource
+    Assert.Contains("""os = "somestring""", tf)  
+
+[<Fact>]
+let ``Can serialize int to TF YAML`` () =
+    let resource = testResource()
+    let tf = Terraform.serialize resource
     Assert.Contains("i = 1", tf)
-    
-    Assert.Contains("b = true", tf)    
-    
-    Assert.Contains("""slist = ["a1", "a2"]""", tf)    
-    
-    Assert.Contains("""oslist = ["s1", "s2"]""", tf)   
-    
+
+[<Fact>]
+let ``Can serialize boolean to TF YAML`` () =
+    let resource = testResource()
+    let tf = Terraform.serialize resource
+    Assert.Contains("b = true", tf)
+
+[<Fact>]
+let ``Can serialize list of string to TF YAML`` () =
+    let resource = testResource()
+    let tf = Terraform.serialize resource
+    Assert.Contains("""slist = ["a1", "a2"]""", tf)  
+
+[<Fact>]
+let ``Can serialize Some list of string to TF YAML`` () =
+    let resource = testResource()
+    let tf = Terraform.serialize resource
+    Assert.Contains("""oslist = ["s1", "s2"]""", tf)
+
+[<Fact>]
+let ``Can serialize Some list of tuple string*string to TF YAML`` () =
+    let resource = testResource()
+    let tf = Terraform.serialize resource
     Assert.Contains("""tags = {""", tf)
     Assert.Contains("key = \"value\"", tf)
 
+[<Fact>]
+let ``Can serialize an object to TF YAML`` () =
+    let resource = testResource()
+    let tf = Terraform.serialize resource
     Assert.Contains("""ob = {""", tf)
     Assert.Contains("name = \"azure_rm\"", tf)
 
+[<Fact>]
+let ``Can serialize an Some object to TF YAML`` () =
+    let resource = testResource()
+    let tf = Terraform.serialize resource
     Assert.Contains("""sob = {""", tf)
     Assert.Contains("name = \"some_azure_rm\"", tf)

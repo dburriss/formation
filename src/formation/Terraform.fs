@@ -115,44 +115,50 @@ module Terraform =
         let n = model |> typeName
         sprintf "${%s.%s.id}" n label
     
-    let serializeResouce (label, model)  = 
-        let mutable sb = new StringBuilder(sprintf "resource \"%s\" \"%s\" {\n" (model |> typeName) label)
+    let append (s:string) (sb:StringBuilder) = sb.Append(s) |> ignore
+    let appendLine (s:string) (sb:StringBuilder) = sb.AppendLine(s) |> ignore
+
+    //let rec serializeObject (sb:StringBuilder) depth o =
+
+    let serializeResouce (sb:StringBuilder) (label, model)  = 
+        sb |> appendLine(sprintf "resource \"%s\" \"%s\" {\n" (model |> typeName) label)
         let indent = "  "
         for pi in (model.GetType().GetProperties()) do
             let (n,t) = pi |> mapProperty
             let value = pi.GetValue(model, null)
             match value with
-            | StringValue s -> sb <- sb.AppendLine(sprintf "%s%s = \"%s\"" indent n s)
-            | BoolValue b -> sb <- sb.AppendLine(sprintf "%s%s = %s" indent n (b|>boolToString))
-            | IntValue i -> sb <- sb.AppendLine(sprintf "%s%s = %i" indent n i)
+            | StringValue s -> sb.AppendLine(sprintf "%s%s = \"%s\"" indent n s) |> ignore
+            | BoolValue b -> sb |> appendLine(sprintf "%s%s = %s" indent n (b|>boolToString))
+            | IntValue i -> sb |> appendLine(sprintf "%s%s = %i" indent n i)
             | ListOfString xs ->
                 let lst = xs |> Seq.toList
                 match lst with
                 | [] -> ignore()
-                | [x] -> sb <- sb.Append(sprintf "%s%s = [\"%s\"]" indent n x)
+                | [x] -> sb |> append(sprintf "%s%s = [\"%s\"]" indent n x)
                 | h::t -> 
-                    sb <- sb.Append(sprintf "%s%s = [\"%s\"" indent n h)
-                    t |> Seq.iter (fun x -> sb <- sb.Append(sprintf ", \"%s\"" x))
-                    sb <- sb.AppendLine("]")
+                    sb |> append(sprintf "%s%s = [\"%s\"" indent n h)
+                    t |> Seq.iter (fun x -> sb |> append(sprintf ", \"%s\"" x))
+                    sb |> appendLine("]")
             | ListOfKeyValue kvs -> 
                 let lst = kvs |> Seq.toList
                 match lst with
                 | [] -> ignore()
                 | kvs -> 
-                    sb <- sb.AppendLine(sprintf "%s%s = {" indent n)
-                    kvs |> List.iter(fun (k,v) -> sb <- sb.AppendLine(sprintf "%s%s = \"%s\"" (indent |> times 2) k v))
-                    sb <- sb.AppendLine(sprintf "%s}" indent)
+                    sb |> appendLine(sprintf "%s%s = {" indent n)
+                    kvs |> List.iter(fun (k,v) -> sb |> appendLine(sprintf "%s%s = \"%s\"" (indent |> times 2) k v))
+                    sb |> appendLine(sprintf "%s}" indent)
             | Obj ps -> 
-                sb <- sb.AppendLine(sprintf "%s%s = {" indent n)
-                ps |> List.iter(fun (k,v) -> sb <- sb.AppendLine(sprintf "%s%s = \"%s\"" (indent |> times 2) k (v.ToString())))
-                sb <- sb.AppendLine(sprintf "%s}" indent)
+                sb |> appendLine(sprintf "%s%s = {" indent n)
+                ps |> List.iter(fun (k,v) -> sb |> appendLine(sprintf "%s%s = \"%s\"" (indent |> times 2) k (v.ToString())))
+                sb |> appendLine(sprintf "%s}" indent)
             | _ -> ignore()
-        sb <- sb.Append("}") 
-        sb |> string
+        sb |> append("}") 
+        sb
 
     let serialize (formation:Formation) =
+        let sb = StringBuilder()
         let rec loop s f =
-            match formation with
-            | Resource x -> x |> serializeResouce
-            | _ -> ""
-        loop "" formation
+            match f with
+            | Resource x -> x |> serializeResouce s
+            | _ -> s
+        (loop sb formation) |> string

@@ -54,7 +54,17 @@ let ``Can serialize a model`` () =
 
     Assert.NotNull(String.IsNullOrEmpty tf)
 
-type TestModel = {
+type TestSimpleModel = {
+    s : string
+    i : int
+    b : bool
+    slist : string list
+    os : string option
+    oslist : (string list) option
+    tags : ((string * string) list) option
+}
+
+type TestModelWithNesting = {
     s : string
     i : int
     b : bool
@@ -66,7 +76,7 @@ type TestModel = {
     sob : azurerm_resource_group option
 }
 
-type TestModelWithNesting = {
+type TestModelWithDeepNesting = {
     s : string
     i : int
     b : bool
@@ -80,8 +90,6 @@ type TestModelWithNesting = {
 }
 
 let testResource() =
-    let servd = AzureRM.service_delegation "servd"
-    let del = AzureRM.delegation "d" servd
     let resource = Resource ("test",{
             s = "a string"
             os = Some "somestring"
@@ -90,15 +98,11 @@ let testResource() =
             slist = ["a1";"a2"]
             oslist = Some ["s1";"s2"]
             tags = Some [("key","value")]
-            ob = AzureRM.resource_group "azure_rm"
-            sob = Some (AzureRM.resource_group "some_azure_rm")
         }:>obj)
 
     resource
 
 let testResourceWithNesting() =
-    let servd = AzureRM.service_delegation "servd"
-    let del = AzureRM.delegation "d" servd
     let resource = Resource ("test",{
             s = "a string"
             os = Some "somestring"
@@ -109,7 +113,6 @@ let testResourceWithNesting() =
             tags = Some [("key","value")]
             ob = AzureRM.resource_group "azure_rm"
             sob = Some (AzureRM.resource_group "some_azure_rm")
-            nestedO = (AzureRM.subnet "test_subnet" "rgn" "vnet" "ads" |> fun sub -> {sub with delegation = Some del})
         }:>obj)
 
     resource
@@ -159,14 +162,14 @@ let ``Can serialize Some list of tuple string*string to TF YAML`` () =
 
 [<Fact>]
 let ``Can serialize an object to TF YAML`` () =
-    let resource = testResource()
+    let resource = testResourceWithNesting()
     let tf = Terraform.serialize resource
     Assert.Contains("""ob = {""", tf)
     Assert.Contains("name = \"azure_rm\"", tf)
 
 [<Fact>]
 let ``Can serialize an Some object to TF YAML`` () =
-    let resource = testResource()
+    let resource = testResourceWithNesting()
     let tf = Terraform.serialize resource
     Assert.Contains("""sob = {""", tf)
     Assert.Contains("name = \"some_azure_rm\"", tf)
@@ -193,6 +196,12 @@ let ``Can create a model of 2 Resource Formations and override values`` () =
 
 [<Fact>]
 let ``Can serialize an object with nested to TF YAML`` () =
-    let resource = testResourceWithNesting()
+    let servd = AzureRM.service_delegation "servd"
+    let del = AzureRM.delegation "d" servd
+    let resource = Resource ("test_subnet", AzureRM.subnet "test_subnet" "rgn" "vnet" "ads" |> fun sub -> {sub with delegation = Some del}:>obj)
     let tf = Terraform.serialize resource
-    Assert.Contains("""resource "azurerm_subnet" "test_subnet" {""", tf)
+    Assert.Contains("""resource "azurerm_subnet" "test_subnet" {""", tf)    
+    Assert.Contains("delegation = {", tf)    
+    Assert.Contains("name = \"d\"", tf)    
+    Assert.Contains("service_delegation = {", tf)    
+    Assert.Contains("name = \"servd\"", tf)

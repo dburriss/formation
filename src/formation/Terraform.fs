@@ -79,6 +79,17 @@ module Terraform =
         //        else None
         //    else None
         //else None
+    let getPossibleOptionValue f (o:obj) =
+        if(isNull o) then 
+            f o
+        else
+            let t = o.GetType()
+            match o with
+            | null -> f null
+            | x when isOption t -> 
+                let y = FSharpValue.GetUnionFields (x, x.GetType()) |> snd |> Seq.head :?> obj
+                f y
+            | _ -> f o
 
     let (|Obj|_|) (o:obj) =
         if(isNull o) then None
@@ -86,16 +97,16 @@ module Terraform =
             let props x = 
                 x.GetType().GetProperties()
                 |> Array.toList
-                |> List.map (fun pi -> (pi.Name, pi.GetValue(x, null)))
-            let t = o.GetType()
-            let ps = 
-                match o with
-                | null -> []
-                | x when isOption t -> 
-                    let y = FSharpValue.GetUnionFields (x, x.GetType()) |> snd |> Seq.head :?> obj
-                    props y
-                | _ -> props o
-
+                //|> List.map (fun pi -> (pi.Name, pi.GetValue(x, null)))
+            //let t = o.GetType()
+            //let ps = 
+            //    match o with
+            //    | null -> []
+            //    | x when isOption t -> 
+            //        let y = FSharpValue.GetUnionFields (x, x.GetType()) |> snd |> Seq.head :?> obj
+            //        props y
+            //    | _ -> props o
+            let ps = getPossibleOptionValue props o
             if(List.isEmpty ps) then None else Some ps
 
     let boolToString b = if(b) then "true" else "false"
@@ -119,40 +130,48 @@ module Terraform =
     let append (s:string) (sb:StringBuilder) = sb.Append(s) |> ignore
     let appendLine (s:string) (sb:StringBuilder) = sb.AppendLine(s) |> ignore
 
-    //let rec serializeProperty (sb:StringBuilder) depth pi =
+    let rec serializeProperty (sb:StringBuilder) depth pi model =
+        let indent = "  " |> times depth
+        let (n,t) = pi |> mapProperty
+        let value = pi.GetValue(model, null) |> getPossibleOptionValue id
+        match value with
+        | null -> ignore()
+        | StringValue s -> sb.AppendLine(sprintf "%s%s = \"%s\"" indent n s) |> ignore
+        | BoolValue b -> sb |> appendLine(sprintf "%s%s = %s" indent n (b|>boolToString))
+        | IntValue i -> sb |> appendLine(sprintf "%s%s = %i" indent n i)
+        | ListOfString xs ->
+            let lst = xs |> Seq.toList
+            match lst with
+            | [] -> ignore()
+            | [x] -> sb |> append(sprintf "%s%s = [\"%s\"]" indent n x)
+            | h::t -> 
+                sb |> append(sprintf "%s%s = [\"%s\"" indent n h)
+                t |> Seq.iter (fun x -> sb |> append(sprintf ", \"%s\"" x))
+                sb |> appendLine("]")
+        | ListOfKeyValue kvs -> 
+            let lst = kvs |> Seq.toList
+            match lst with
+            | [] -> ignore()
+            | kvs -> 
+                sb |> appendLine(sprintf "%s%s = {" indent n)
+                kvs 
+                |> List.iter(fun (k,v) -> 
+                    sb |> appendLine(sprintf "%s%s = \"%s\"" (indent |> times 1) k v))
+                sb |> appendLine(sprintf "%s}" indent)
+        | Obj ps -> 
+            sb |> appendLine(sprintf "%s%s = {" indent n)
+            ps |> List.iter (fun p -> serializeProperty sb (depth + 1) p value)
+            //ps 
+            //|> List.iter(fun (k,v) -> 
+            //    sb |> appendLine(sprintf "%s%s = \"%s\"" (indent |> times (depth + 1)) k (v.ToString())))
+            sb |> appendLine(sprintf "%s}" indent)
+        | _ -> ignore()
 
     let serializeResouce (sb:StringBuilder) (label, model)  = 
         sb |> appendLine(sprintf "resource \"%s\" \"%s\" {\n" (model |> typeName) label)
-        let indent = "  "
+        let depth = 1
         for pi in (model.GetType().GetProperties()) do
-            let (n,t) = pi |> mapProperty
-            let value = pi.GetValue(model, null)
-            match value with
-            | StringValue s -> sb.AppendLine(sprintf "%s%s = \"%s\"" indent n s) |> ignore
-            | BoolValue b -> sb |> appendLine(sprintf "%s%s = %s" indent n (b|>boolToString))
-            | IntValue i -> sb |> appendLine(sprintf "%s%s = %i" indent n i)
-            | ListOfString xs ->
-                let lst = xs |> Seq.toList
-                match lst with
-                | [] -> ignore()
-                | [x] -> sb |> append(sprintf "%s%s = [\"%s\"]" indent n x)
-                | h::t -> 
-                    sb |> append(sprintf "%s%s = [\"%s\"" indent n h)
-                    t |> Seq.iter (fun x -> sb |> append(sprintf ", \"%s\"" x))
-                    sb |> appendLine("]")
-            | ListOfKeyValue kvs -> 
-                let lst = kvs |> Seq.toList
-                match lst with
-                | [] -> ignore()
-                | kvs -> 
-                    sb |> appendLine(sprintf "%s%s = {" indent n)
-                    kvs |> List.iter(fun (k,v) -> sb |> appendLine(sprintf "%s%s = \"%s\"" (indent |> times 2) k v))
-                    sb |> appendLine(sprintf "%s}" indent)
-            | Obj ps -> 
-                sb |> appendLine(sprintf "%s%s = {" indent n)
-                ps |> List.iter(fun (k,v) -> sb |> appendLine(sprintf "%s%s = \"%s\"" (indent |> times 2) k (v.ToString())))
-                sb |> appendLine(sprintf "%s}" indent)
-            | _ -> ignore()
+            serializeProperty sb depth pi model
         sb |> append("}") 
         sb
 

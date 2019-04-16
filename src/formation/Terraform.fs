@@ -69,16 +69,7 @@ module Terraform =
         | :? Option<(string*string)list> as x -> x
         | :? ((string*string) list) as x -> x |> Some
         | _ -> None
-        //let t0 = o.GetType()
-        //if(isOption<_> t0) then
-        //    let t1 = t0.GetGenericArguments().[0]
-        //    if(isSeqOf<_> t1) then 
-        //        let t2 = t1.GetGenericArguments().[0]
-        //        if(isTupleOf<string*string> t2) then
-        //            Some [("a1","a2")]
-        //        else None
-        //    else None
-        //else None
+
     let getPossibleOptionValue f (o:obj) =
         if(isNull o) then 
             f o
@@ -97,15 +88,7 @@ module Terraform =
             let props x = 
                 x.GetType().GetProperties()
                 |> Array.toList
-                //|> List.map (fun pi -> (pi.Name, pi.GetValue(x, null)))
-            //let t = o.GetType()
-            //let ps = 
-            //    match o with
-            //    | null -> []
-            //    | x when isOption t -> 
-            //        let y = FSharpValue.GetUnionFields (x, x.GetType()) |> snd |> Seq.head :?> obj
-            //        props y
-            //    | _ -> props o
+
             let ps = getPossibleOptionValue props o
             if(List.isEmpty ps) then None else Some ps
 
@@ -116,8 +99,7 @@ module Terraform =
         [0..n] |> List.iter (fun _ -> sb <- sb.Append(s))
         sb |> string
 
-    let typeName model = model.GetType().Name.ToLower()
-    
+    let typeName model = model.GetType().Name.ToLower()    
 
     let makeName model label =
         let n = model |> typeName
@@ -127,6 +109,8 @@ module Terraform =
         let n = model |> typeName
         sprintf "${%s.%s.id}" n label
     
+    let var label = sprintf "${var.%s}" label
+
     let append (s:string) (sb:StringBuilder) = sb.Append(s) |> ignore
     let appendLine (s:string) (sb:StringBuilder) = sb.AppendLine(s) |> ignore
 
@@ -172,7 +156,15 @@ module Terraform =
         let depth = 1
         for pi in (model.GetType().GetProperties()) do
             serializeProperty sb depth pi model
-        sb |> append("}") 
+        sb |> appendLine("}")
+        sb |> appendLine ""
+        sb
+    
+    let serializeOutput (sb:StringBuilder) (label, value) = 
+        sb |> appendLine (sprintf "output \"%s\" {" label)
+        sb |> appendLine (sprintf "  value = \"%s\"" value)
+        sb |> appendLine "}"
+        sb |> appendLine ""
         sb
 
     let serialize (formation:Formation) =
@@ -180,6 +172,7 @@ module Terraform =
         let rec loop sbuilder fmtn =
             match fmtn with
             | Resource x -> x |> serializeResouce sbuilder
+            | Output (label,value) -> serializeOutput sbuilder (label,value)
             | Formation xs -> 
                 xs |> List.iter (fun f -> loop sbuilder f |> ignore)
                 sbuilder

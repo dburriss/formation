@@ -205,3 +205,10 @@ let ``Can serialize an object with nested to TF YAML`` () =
     Assert.Contains("name = \"d\"", tf)    
     Assert.Contains("service_delegation = {", tf)    
     Assert.Contains("name = \"servd\"", tf)
+
+[<Fact>]
+let ``Can serialize an output`` () =
+    let output = Output ("test", Terraform.var "default-ami")
+    let tf = Terraform.serialize output
+    Assert.Contains("""output "test" {""", tf)
+    Assert.Contains("value = \"${var.default-ami}\"", tf)

@@ -5,7 +5,7 @@ type Formation =
 | Provider of obj
 | Resource of (string * obj)
 | Data of (string * obj)
-| Output of string
+| Output of string * string
 //| Module ?
 | Formation of Formation list
 

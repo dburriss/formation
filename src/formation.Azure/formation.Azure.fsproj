@@ -5,9 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Models.fs" />
+    <Compile Include="Datasources.fs" />
+    <Compile Include="Resources.fs" />
     <Compile Include="Constants.fs" />
-    <Compile Include="AzureRM.fs" />
+    <Compile Include="AzureResource.fs" />
   </ItemGroup>
 
   <ItemGroup>

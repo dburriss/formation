@@ -3,8 +3,8 @@ module Tests
 open System
 open Xunit
 open formation
+open formation.Azure.Resources
 open formation.Azure.Constants
-open formation.Azure
 
 // notes
 // Functions return with type like Resource / Data
@@ -19,7 +19,7 @@ let ``Can create a model of single Formation and override values`` () =
 
     let mySmallVm label name rg_name =
         // set custom company defaults
-        AzureRM.virtual_machine VM_Size.Basic_A0 AzureRegion.westus (rg_name |> Terraform.makeName label) name environment
+        AzureResource.virtual_machine VM_Size.Basic_A0 AzureRegion.westus (rg_name |> Terraform.makeName label) name environment
         |> fun vm -> {vm with delete_data_disks_on_termination = true}
         
 
@@ -31,12 +31,12 @@ let ``Can create a model of single Formation and override values`` () =
 let ``Can serialize a model`` () =
     // Resource Group
     let rg = 
-        AzureRM.resource_group "azure_test_group_rm"
+        AzureResource.resource_group "azure_test_group_rm"
         |> fun res -> { res with location = Some AzureRegion.westeurope }
     
     // define a custom function that bakes in your basic resource setup
     let standardVm label name resourceGroupName =
-        AzureRM.virtual_machine VM_Size.Standard_A0 AzureRegion.westeurope (resourceGroupName |> Terraform.makeName label) name label     
+        AzureResource.virtual_machine VM_Size.Standard_A0 AzureRegion.westeurope (resourceGroupName |> Terraform.makeName label) name label     
     
     // environment would be sent in via a command line argument to generate TF for specific environment
     // Could have conditions on each environment written in code (ie. smaller sized machine for test)
@@ -111,8 +111,8 @@ let testResourceWithNesting() =
             slist = ["a1";"a2"]
             oslist = Some ["s1";"s2"]
             tags = Some [("key","value")]
-            ob = AzureRM.resource_group "azure_rm"
-            sob = Some (AzureRM.resource_group "some_azure_rm")
+            ob = AzureResource.resource_group "azure_rm"
+            sob = Some (AzureResource.resource_group "some_azure_rm")
         }:>obj)
 
     resource
@@ -181,7 +181,7 @@ let ``Can create a model of 2 Resource Formations and override values`` () =
     let rgName = "test_rg"
 
     let mySmallVm label name rg_name =
-        AzureRM.virtual_machine VM_Size.Basic_A0 AzureRegion.westus (rg_name |> Terraform.makeName label) name environment
+        AzureResource.virtual_machine VM_Size.Basic_A0 AzureRegion.westus (rg_name |> Terraform.makeName label) name environment
         |> fun vm -> {vm with delete_data_disks_on_termination = true}
         
 
@@ -196,9 +196,9 @@ let ``Can create a model of 2 Resource Formations and override values`` () =
 
 [<Fact>]
 let ``Can serialize an object with nested to TF YAML`` () =
-    let servd = AzureRM.service_delegation "servd"
-    let del = AzureRM.delegation "d" servd
-    let resource = Resource ("test_subnet", AzureRM.subnet "test_subnet" "rgn" "vnet" "ads" |> fun sub -> {sub with delegation = Some del}:>obj)
+    let servd = AzureResource.service_delegation "servd"
+    let del = AzureResource.delegation "d" servd
+    let resource = Resource ("test_subnet", AzureResource.subnet "test_subnet" "rgn" "vnet" "ads" |> fun sub -> {sub with delegation = Some del}:>obj)
     let tf = Terraform.serialize resource
     Assert.Contains("""resource "azurerm_subnet" "test_subnet" {""", tf)    
     Assert.Contains("delegation = {", tf)    
@@ -211,4 +211,15 @@ let ``Can serialize an output`` () =
     let output = Output ("test", Terraform.var "default-ami")
     let tf = Terraform.serialize output
     Assert.Contains("""output "test" {""", tf)
+    Assert.Contains("value = \"${var.default-ami}\"", tf)
+
+type TestData = {
+    s : string
+}
+[<Fact>]
+let ``Can serialize an data`` () =
+    let d1 = ()
+    let data = Data ("test", null)
+    let tf = Terraform.serialize data
+    Assert.Contains("""data "test" {""", tf)
     Assert.Contains("value = \"${var.default-ami}\"", tf)

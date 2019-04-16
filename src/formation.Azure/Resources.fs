@@ -1,4 +1,4 @@
-﻿namespace formation.Azure
+﻿namespace formation.Azure.Resources
 
 open System
 

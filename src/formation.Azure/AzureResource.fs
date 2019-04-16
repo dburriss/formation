@@ -1,7 +1,7 @@
 ﻿namespace formation
 
-module AzureRM =
-    open formation.Azure
+module AzureResource =
+    open formation.Azure.Resources
     open formation.Azure.Constants
 
     let resource_group name =

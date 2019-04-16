@@ -3,6 +3,7 @@ module Tests
 open System
 open Xunit
 open formation
+open formation.Azure
 open formation.Azure.Resources
 open formation.Azure.Constants
 
@@ -217,9 +218,10 @@ type TestData = {
     s : string
 }
 [<Fact>]
-let ``Can serialize an data`` () =
-    let d1 = ()
-    let data = Data ("test", null)
+let ``Can serialize n data`` () =
+    let d1 = AzureDatasource.public_ip (Terraform.smakeRef "azurerm_public_ip" "test" "name") (Terraform.smakeRef "azurerm_virtual_machine" "test" "resource_group_name")
+    let data = Data ("test", d1:>obj)
     let tf = Terraform.serialize data
-    Assert.Contains("""data "test" {""", tf)
-    Assert.Contains("value = \"${var.default-ami}\"", tf)
+    Assert.Contains("""data "azurerm_public_ip" "test" {""", tf)
+    Assert.Contains("name = \"${azurerm_public_ip.test.name}\"", tf)    
+    Assert.Contains("resource_group_name = \"${azurerm_virtual_machine.test.resource_group_name}\"", tf)

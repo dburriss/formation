@@ -1,4 +1,4 @@
-﻿namespace formation
+﻿namespace formation.Azure
 
 module AzureResource =
     open formation.Azure.Resources

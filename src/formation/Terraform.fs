@@ -99,15 +99,20 @@ module Terraform =
         [0..n] |> List.iter (fun _ -> sb <- sb.Append(s))
         sb |> string
 
-    let typeName model = model.GetType().Name.ToLower()    
+    let typeName model = model.GetType().Name.ToLower()
 
-    let makeName model label =
-        let n = model |> typeName
-        sprintf "${%s.%s.name}" n label
+    let sref s = sprintf "${%s}" s
 
-    let makeId model label =
+    let smakeRef typeName label propertyName = 
+        sprintf "%s.%s.%s" typeName label propertyName |> sref
+    
+    let makeRef model label propertyName =
         let n = model |> typeName
-        sprintf "${%s.%s.id}" n label
+        smakeRef n label propertyName
+
+    let makeName model label = makeRef model label "name"
+
+    let makeId model label = makeRef model label "id"
     
     let var label = sprintf "${var.%s}" label
 
@@ -167,12 +172,22 @@ module Terraform =
         sb |> appendLine ""
         sb
 
+    let serializeData (sb:StringBuilder) (label, model)  = 
+        sb |> appendLine(sprintf "data \"%s\" \"%s\" {\n" (model |> typeName) label)
+        let depth = 1
+        for pi in (model.GetType().GetProperties()) do
+            serializeProperty sb depth pi model
+        sb |> appendLine("}")
+        sb |> appendLine ""
+        sb
+
     let serialize (formation:Formation) =
         let sb = StringBuilder()
         let rec loop sbuilder fmtn =
             match fmtn with
             | Resource x -> x |> serializeResouce sbuilder
             | Output (label,value) -> serializeOutput sbuilder (label,value)
+            | Data x -> x |> serializeData sbuilder
             | Formation xs -> 
                 xs |> List.iter (fun f -> loop sbuilder f |> ignore)
                 sbuilder

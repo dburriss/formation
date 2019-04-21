@@ -292,3 +292,12 @@ type Managed_Disk_Type() =
     static member Standard_LRS = "Standard_LRS"
     static member StandardSSD_LRS  = "StandardSSD_LRS "
     static member Premium_LRS = "Premium_LRS"
+
+type Upgrade_Policy_Mode() =
+    static member Rolling = "Rolling"
+    static member Manual = "Manual"
+    static member Automatic = "Automatic"
+
+type Eviction_Policy() = 
+    static member Deallocate = "Deallocate"
+    static member Delete = "Delete"

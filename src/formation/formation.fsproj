@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <Compile Include="Model.fs" />
+    <Compile Include="Builder.fs" />
     <Compile Include="Terraform.fs" />
   </ItemGroup>
 

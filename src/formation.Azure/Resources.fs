@@ -1,7 +1,7 @@
 ﻿namespace formation.Azure.Resources
 
 open System
-
+type todo = exn
 //provider
 type azurerm = {
     /// The version number for the AzureRM Provider
@@ -207,3 +207,49 @@ and storage_os_disk = {
     managed_disk_type : string option
     vhd_uri : string option
 }
+
+type azurerm_virtual_machine_scale_set = {
+    name : string
+    resource_group_name : string
+    location : string
+    network_profile : network_profile
+    os_profile : os_profile
+    os_profile_windows_config : os_profile_windows_config option
+    os_profile_linux_config : os_profile_linux_config option
+    sku : sku
+    storage_profile_os_disk : storage_profile_os_disk 
+    upgrade_policy_mode : string
+
+    automatic_os_upgrade : bool
+    boot_diagnostics : boot_diagnostics option
+    extension : todo
+    eviction_policy : string option
+    health_probe_id: string option
+    license_type : string option
+    os_profile_secrets : os_profile_secrets option
+    overprovision : bool
+    plan : plan option
+    rolling_upgrade_policy : rolling_upgrade_policy
+
+
+    network_interface_ids : string list
+    vm_size : string
+    availability_set_id : string option
+    delete_os_disk_on_termination : bool
+    delete_data_disks_on_termination  : bool
+    identity : identity option
+    primary_network_interface_id  : string option
+    storage_data_disk : (storage_data_disk list) option
+    storage_image_reference : storage_image_reference option
+    storage_os_disk : storage_os_disk option
+    tags : ((string * string) list) option
+    zones : (string list) option
+    //attributes
+    id : string 
+}
+and network_profile = {
+    name : string
+}
+and sku = todo
+and storage_profile_os_disk = todo
+and rolling_upgrade_policy = todo

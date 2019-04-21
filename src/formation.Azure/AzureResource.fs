@@ -12,7 +12,7 @@ module AzureResource =
         }
         model
 
-    let virtual_machine size location resource_group_name name lbl  =
+    let virtual_machine size location resource_group_name name  =
         let model : azurerm_virtual_machine = {
             name = name
             resource_group_name = resource_group_name
@@ -70,3 +70,5 @@ module AzureResource =
             actions = None
         }
         model
+
+    let azurerm_virtual_machine_scale_set () = todo

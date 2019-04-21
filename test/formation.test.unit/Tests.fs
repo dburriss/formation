@@ -20,7 +20,7 @@ let ``Can create a model of single Formation and override values`` () =
 
     let mySmallVm label name rg_name =
         // set custom company defaults
-        AzureResource.virtual_machine VM_Size.Basic_A0 AzureRegion.westus (rg_name |> Terraform.makeName label) name environment
+        AzureResource.virtual_machine VM_Size.Basic_A0 AzureRegion.westus (rg_name |> Terraform.makeName label) name
         |> fun vm -> {vm with delete_data_disks_on_termination = true}
         
 
@@ -37,7 +37,7 @@ let ``Can serialize a model`` () =
     
     // define a custom function that bakes in your basic resource setup
     let standardVm label name resourceGroupName =
-        AzureResource.virtual_machine VM_Size.Standard_A0 AzureRegion.westeurope (resourceGroupName |> Terraform.makeName label) name label     
+        AzureResource.virtual_machine VM_Size.Standard_A0 AzureRegion.westeurope (resourceGroupName |> Terraform.makeName label) name     
     
     // environment would be sent in via a command line argument to generate TF for specific environment
     // Could have conditions on each environment written in code (ie. smaller sized machine for test)
@@ -182,7 +182,7 @@ let ``Can create a model of 2 Resource Formations and override values`` () =
     let rgName = "test_rg"
 
     let mySmallVm label name rg_name =
-        AzureResource.virtual_machine VM_Size.Basic_A0 AzureRegion.westus (rg_name |> Terraform.makeName label) name environment
+        AzureResource.virtual_machine VM_Size.Basic_A0 AzureRegion.westus (rg_name |> Terraform.makeName label) name
         |> fun vm -> {vm with delete_data_disks_on_termination = true}
         
 
@@ -225,3 +225,16 @@ let ``Can serialize n data`` () =
     Assert.Contains("""data "azurerm_public_ip" "test" {""", tf)
     Assert.Contains("name = \"${azurerm_public_ip.test.name}\"", tf)    
     Assert.Contains("resource_group_name = \"${azurerm_virtual_machine.test.resource_group_name}\"", tf)
+
+[<Fact>]
+let ``Can create formation with builder`` () =
+
+    let tf = formation {
+        resource ("test1", AzureResource.virtual_machine VM_Size.Basic_A0 AzureRegion.australiaeast "rg" "avm")
+        resource ("test2", AzureResource.virtual_machine VM_Size.Basic_A0 AzureRegion.australiaeast "rg" "avm")
+    } 
+    
+    let s = tf |> Terraform.serialize
+
+    let count = tf |> (fun (Formation xs) -> List.length xs)
+    Assert.Equal(2,count)

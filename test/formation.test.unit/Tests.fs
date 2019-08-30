@@ -238,3 +238,16 @@ let ``Can create formation with builder`` () =
 
     let count = tf |> (fun (Formation xs) -> List.length xs)
     Assert.Equal(2,count)
+
+[<Fact>]
+let ``Can create multiple blocks`` () =
+
+    let tf = formation {
+        resource ("test1", AzureResource.virtual_machine VM_Size.Basic_A0 AzureRegion.australiaeast "rg" "avm")
+        resource ("test2", AzureResource.virtual_machine VM_Size.Basic_A0 AzureRegion.australiaeast "rg" "avm")
+    } 
+    
+    let s = tf |> Terraform.serialize
+
+    let count = tf |> (fun (Formation xs) -> List.length xs)
+    Assert.Equal(2,count)

@@ -1,5 +1,12 @@
 ﻿namespace formation
 
+type Blocks<'a>() =
+    member private this.data = Array.empty<'a>
+    //new ctor with array
+    static member map = fun f (xs:Blocks<'a>) -> xs.data |> Array.map f
+    member this.Map(f) = this.data |> Array.map f |> id
+
+
 //data
 type Formation =
 | Provider of obj
